@@ -38,4 +38,3 @@ while game:
     pg.display.update()
     clock.tick(FPS)
     pg.display.set_caption(f'Rally   FPS: {int(clock.get_fps())}')
-
