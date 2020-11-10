@@ -8,6 +8,7 @@ SIZE = WIDTH, HEIGT = 800, 600
 GRAY = (128, 128, 128)
 GREEN = (0, 128, 0)
 WHITE = (200, 200, 200)
+block = False
 
 # bg_image = pg.image.load('Image/road.jpg')
 # bg_image_rect = bg_image.get_rect(topleft=(0, 0))
@@ -35,23 +36,71 @@ class Player(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.position = pg.math.Vector2(self.x, self.y)
         self.velocity = pg.math.Vector2()
-   
+
     def update(self):
         self.image = pg.transform.rotate(self.orig_image, self.angle)
         self.rect = self.image.get_rect(center=self.rect.center)
         self.position += self.velocity
         self.rect.center = self.position
 
+        keys = pg.key.get_pressed()
+        if keys[pg.K_RIGHT]:
+            self.velocity.x = self.speed
+            self.angle -= 1
+            if self.angle < -25:
+                self.angle = -25
+        elif keys[pg.K_LEFT]:
+            self.velocity.x = -self.speed
+            self.angle += 1
+            if self.angle > 25:
+                self.angle = 25
+        else:
+            self.velocity.x = 0
+            if self.angle < 0:
+                self.angle += 1
+            elif self.angle > 0:
+                self.angle -= 1
+        if keys[pg.K_UP]:
+            self.velocity.y -= self.acceleration
+            if self.velocity.y > -self.speed:
+                self.velocity.y = -self.speed
+        if keys[pg.K_DOWN]:
+            self.velocity.y += self.acceleration
+            if self.velocity.y > self.speed:
+                self.velocity.y = self.speed
+        else:
+            if self.velocity.y < 0:
+                self.velocity.y += self.acceleration
+                if self.velocity.y > 0:
+                    self.velocity.y = 0
+            elif self.velocity.y > 0:
+                self.velocity.y -= self.acceleration
+                if self.velocity.y < 0:
+                    self.velocity.y = 0
+
 
 class Car(pg.sprite.Sprite):
     def __init__(self, x, y, img):
         pg.sprite.Sprite.__init__(self)
-        
         self.image = pg.transform.flip(img, False, True)
-        # self.image = pg.image.load('Image/car1.png')        
+        # self.image = pg.image.load('Image/car1.png')   
         # self.w, self.h = w, h
         self.speed = random.randint(2, 3)
         self.rect = self.image.get_rect(center=(x, y))
+
+    def update(self):
+        self.rect.y += self.speed
+        if self.rect.top >= HEIGT:
+            self.rect.bottom = 0
+            list_x.remove(self.rect.centerx)
+            while True:
+                self.rect.centerx = random.randrange(80, WIDTH, 80)
+                if self.rect.centerx in list_x:
+                    continue
+                else:
+                    list_x.append(self.rect.centerx)
+                    self.speed = random.randint(2, 3)
+                    break
 
 
 class Road(pg.sprite.Sprite):
@@ -71,7 +120,7 @@ class Road(pg.sprite.Sprite):
                 )
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = 1
-    
+
     def update(self):
         self.rect.y += self.speed
         if self.rect.top >= HEIGT:
@@ -79,9 +128,11 @@ class Road(pg.sprite.Sprite):
 
 
 all_sprite = pg.sprite.Group()
+cars_group = pg.sprite.Group()
 for r in range(2):
     all_sprite.add(Road(0, 0 if r == 0 else -HEIGT))
 player = Player()
+
 list_x = []
 n = 0
 while n < 6:
@@ -93,7 +144,7 @@ while n < 6:
         all_sprite.add(Car(x, -cars[0].get_height(), random.choice(cars)))
         n += 1
 # car1_w, car1_h = car1.image.get_width(), car1.image.get_height()
-all_sprite.add(player)
+all_sprite.add(cars_group, player)
 
 
 game = True
@@ -102,6 +153,14 @@ while game:
     for e in pg.event.get():
         if e.type == pg.QUIT:
             game = False
+
+    if pg.sprite.spritecollideany(player, cars_group):
+        if not block:
+            player.position[0] += 50 * random.randrange(-1, 2, 2)
+            player.angle = 50 * random.randrange(-1, 2, 2)
+            block = True
+    else:
+        block = False     
                
     all_sprite.update()
     all_sprite.draw(screen)
