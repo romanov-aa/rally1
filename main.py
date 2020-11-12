@@ -4,35 +4,37 @@ import os
 
 os.environ['SDL_VIDEO_CENTERED'] = '1'
 
-SIZE = WIDTH, HEIGT = 800, 600
+SIZE = WIDTH, HEIGHT = 800, 600
 GRAY = (128, 128, 128)
 GREEN = (0, 128, 0)
-WHITE = (200, 200, 200)
+WHEIT = (200, 200, 200)
 block = False
-
-# bg_image = pg.image.load('Image/road.jpg')
-# bg_image_rect = bg_image.get_rect(topleft=(0, 0))
-# bg_image_2_rect = bg_image.get_rect(topleft=(0, 600 - HEIGT))
-cars = [pg.image.load('Image/car1.png'), pg.image.load('Image/car2.png'), pg.image.load('Image/car3.png')]
-
+car_accident = 0
+MENUBUTTON = (200, 100, 0)
 
 pg.init()
-pg.display.set_caption('Rally ')
+pg.display.set_caption('Rally')
 screen = pg.display.set_mode(SIZE)
 
 FPS = 120
 clock = pg.time.Clock()
 
+cars = [pg.image.load('Image/car1.png'), pg.image.load('Image/car2.png'),
+        pg.image.load('Image/car3.png')]
+sound_car_accident = pg.mixer.Sound('sound/udar.wav')
+font = pg.font.Font(None, 32)
+
 
 class Player(pg.sprite.Sprite):
     def __init__(self):
-        pg.sprite.Sprite.__init__(self)
+        super().__init__()
+
         self.image = pg.image.load('Image/car4.png')
         self.orig_image = self.image
         self.angle = 0
         self.speed = 2
         self.acceleration = 0.02
-        self.x, self.y = WIDTH // 2, HEIGT // 2
+        self.x, self.y = WIDTH // 2, HEIGHT // 2
         self.rect = self.image.get_rect()
         self.position = pg.math.Vector2(self.x, self.y)
         self.velocity = pg.math.Vector2()
@@ -62,9 +64,9 @@ class Player(pg.sprite.Sprite):
                 self.angle -= 1
         if keys[pg.K_UP]:
             self.velocity.y -= self.acceleration
-            if self.velocity.y > -self.speed:
+            if self.velocity.y < -self.speed:
                 self.velocity.y = -self.speed
-        if keys[pg.K_DOWN]:
+        elif keys[pg.K_DOWN]:
             self.velocity.y += self.acceleration
             if self.velocity.y > self.speed:
                 self.velocity.y = self.speed
@@ -82,16 +84,16 @@ class Player(pg.sprite.Sprite):
 class Car(pg.sprite.Sprite):
     def __init__(self, x, y, img):
         pg.sprite.Sprite.__init__(self)
+
         self.image = pg.transform.flip(img, False, True)
-        # self.image = pg.image.load('Image/car1.png')   
-        # self.w, self.h = w, h
         self.speed = random.randint(2, 3)
         self.rect = self.image.get_rect(center=(x, y))
 
     def update(self):
         self.rect.y += self.speed
-        if self.rect.top >= HEIGT:
+        if self.rect.top >= HEIGHT:
             self.rect.bottom = 0
+
             list_x.remove(self.rect.centerx)
             while True:
                 self.rect.centerx = random.randrange(80, WIDTH, 80)
@@ -114,23 +116,22 @@ class Road(pg.sprite.Sprite):
         for xx in range(10):
             for yy in range(10):
                 pg.draw.line(
-                    self.image, WHITE, 
+                    self.image, WHEIT,
                     (40 + xx * 80, 0 if xx == 0 or xx == 9 else 10 + yy * 60),
-                    (40 + xx * 80, 600 if xx == 0 or xx == 9 else 50 + yy * 60), 5
-                )
+                    (40 + xx * 80, 600 if xx == 0 or xx == 9 else 50 + yy * 60), 5)
         self.rect = self.image.get_rect(topleft=(x, y))
         self.speed = 1
 
     def update(self):
         self.rect.y += self.speed
-        if self.rect.top >= HEIGT:
+        if self.rect.top >= HEIGHT:
             self.rect.bottom = 0
 
 
 all_sprite = pg.sprite.Group()
 cars_group = pg.sprite.Group()
 for r in range(2):
-    all_sprite.add(Road(0, 0 if r == 0 else -HEIGT))
+    all_sprite.add(Road(0, 0 if r == 0 else -HEIGHT))
 player = Player()
 
 list_x = []
@@ -141,29 +142,47 @@ while n < 6:
         continue
     else:
         list_x.append(x)
-        all_sprite.add(Car(x, -cars[0].get_height(), random.choice(cars)))
+        cars_group.add(Car(x, -cars[0].get_height(), random.choice(cars)))
         n += 1
-# car1_w, car1_h = car1.image.get_width(), car1.image.get_height()
+
 all_sprite.add(cars_group, player)
 
 
-game = True
+def screen1():
+    sc = pg.Surface(screen.get_size())
+    sc.fill(pg.Color('navy'))
+    start_button = pg.image.load('Image/start_button.png')
+    start_button_rect = start_button.get_rect(center=(400, 150))
+    stop_button = pg.image.load('Image/stop_button.png')
+    stop_button_rect = stop_button.get_rect(center=(400, 350))
+    sc.blit(start_button, start_button_rect)
+    sc.blit(stop_button, stop_button_rect)
+    screen.blit(sc, (0, 0))
 
+
+game = True
 while game:
     for e in pg.event.get():
         if e.type == pg.QUIT:
             game = False
+        elif e.type == pg.MOUSEBUTTONDOWN:
+            if e.button == 1:
+                pass
 
     if pg.sprite.spritecollideany(player, cars_group):
         if not block:
             player.position[0] += 50 * random.randrange(-1, 2, 2)
             player.angle = 50 * random.randrange(-1, 2, 2)
+            sound_car_accident.play()
+            car_accident += 1
             block = True
     else:
-        block = False     
-               
-    all_sprite.update()
-    all_sprite.draw(screen)
+        block = False
+
+    # all_sprite.update()
+    # all_sprite.draw(screen)
+    # screen.blit(font.render(f'{car_accident = }', 1, GREEN), (45, 20))
+    screen1()
     pg.display.update()
     clock.tick(FPS)
     pg.display.set_caption(f'Rally   FPS: {int(clock.get_fps())}')
